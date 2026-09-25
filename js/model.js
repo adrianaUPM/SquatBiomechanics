@@ -81,6 +81,39 @@ const BM = (() => {
     return e1.y < e2.y ? e1 : e2;
   }
 
+  /*
+   * Punto de la barra en el RDL: sobre el contorno anterior de la pierna
+   * (tibia → rodilla → muslo, más el radio de la barra) a la distancia del
+   * brazo extendido desde el hombro. Se recorre el contorno de la cadera hacia
+   * abajo y se toma el primer punto que alcanza esa distancia.
+   */
+  const BAR_R = 1.5;
+  function rdlBarOnLegs(b, A, K, H, S, Hh) {
+    const fwd = (p0, p1) => { const d = unit(sub(p1, p0)); return V(d.y, -d.x); };
+    const ns = fwd(A, K), nt = fwd(K, H);
+    const off = (p, n, w) => add(p, mul(n, w * Hh + BAR_R));
+    const line = [
+      off(H, nt, 0.042), off(K, nt, 0.03), off(K, ns, 0.027), off(A, ns, 0.016),
+    ];
+    const reach = b.ua + b.fa + 0.4 * b.hand;
+    let prev = line[0];
+    if (len(sub(prev, S)) >= reach) return add(S, mul(unit(sub(prev, S)), reach));
+    for (let i = 1; i < line.length; i++) {
+      const cur = line[i];
+      if (len(sub(cur, S)) >= reach) {
+        let lo = 0, hi = 1;
+        for (let j = 0; j < 22; j++) {
+          const m = (lo + hi) / 2;
+          if (len(sub(add(prev, mul(sub(cur, prev), m)), S)) < reach) lo = m; else hi = m;
+        }
+        return add(prev, mul(sub(cur, prev), (lo + hi) / 2));
+      }
+      prev = cur;
+    }
+    // la pierna queda más cerca que el brazo: la barra toca el empeine
+    return prev;
+  }
+
   function buildPose(b, ex, s, phi, a) {
     const Hh = heightOf(b);
     const A = V(0, b.ankleH);
@@ -101,10 +134,12 @@ const BM = (() => {
       // codo hacia abajo y atrás; el brazo se ve acortado de perfil
       E = add(S, mul(add(mul(td, -0.8), mul(n, -0.6)), 0.6 * b.ua));
     } else {
-      // RDL: brazos colgando en vertical, barra en las manos.
-      E = V(S.x, S.y - b.ua);
-      W = V(S.x, S.y - b.ua - b.fa);
-      bar = V(S.x, W.y - 0.4 * b.hand);
+      // RDL: brazos extendidos y dorsales activos → la barra baja rozando
+      // la cara anterior del muslo y de la tibia.
+      bar = rdlBarOnLegs(b, A, K, H, S, Hh);
+      const hd = unit(sub(bar, S));
+      W = add(bar, mul(hd, -0.4 * b.hand));
+      E = add(S, mul(hd, b.ua));
     }
     const f = footGeom(b);
     return {
@@ -205,8 +240,8 @@ const BM = (() => {
   /* ---------------- PESO MUERTO RUMANO ----------------
    * El torso se inclina de forma progresiva; la rodilla mantiene una flexión
    * suave. La cadera se desplaza hacia atrás (phi) lo necesario para mantener
-   * el equilibrio. La posición inferior se alcanza cuando la barra llega a
-   * media tibia o cuando la flexión de cadera alcanza el límite de isquios.
+   * el equilibrio. La posición inferior se alcanza cuando la barra, pegada a la
+   * pierna, baja un cuarto de tibia por debajo de la rodilla o cuando la flexión de cadera alcanza el límite de isquios.
    */
   const RD = { kSoft: 18 * DEG, sMin: -6 * DEG, phiMax: 80 * DEG, hipMin: 62 };
 
@@ -230,9 +265,9 @@ const BM = (() => {
     for (; deg <= 88; deg += 0.5) {
       const fr = rdlFrameAt(b, deg * DEG, RD.kSoft, mid);
       const P = buildPose(b, 'rdl', fr.s, fr.phi, fr.a);
-      const midShin = (P.A.y + P.K.y) / 2;
+      const belowKnee = P.K.y - 0.25 * (P.K.y - P.A.y);
       const hip = anglesOf(P).hip;
-      if (P.bar.y <= midShin) { reason = 'bar'; break; }
+      if (P.bar.y <= belowKnee) { reason = 'bar'; break; }
       if (P.bar.y <= plateR + 1) { reason = 'floor'; break; }
       if (hip <= RD.hipMin) { reason = 'hams'; break; }
     }

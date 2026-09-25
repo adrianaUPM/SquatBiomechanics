@@ -289,7 +289,7 @@
       add('Cadera atrás', s.hipBack.toFixed(0) + ' cm');
       $('styleBadge').innerHTML = `Squat · torso máx. <b>${Math.round(s.maxTorso)}°</b>`;
     } else {
-      const reason = { bar: 'Barra a media tibia', hams: 'Límite de isquios', floor: 'Discos tocan el suelo', max: 'Inclinación máxima' }[rep.meta.reason] || '';
+      const reason = { bar: 'Barra bajo la rodilla', hams: 'Límite de isquios', floor: 'Discos tocan el suelo', max: 'Inclinación máxima' }[rep.meta.reason] || '';
       add('Posición inferior', reason, true);
       add('Torso máx.', Math.round(s.maxTorso) + '°');
       add('Cadera mín.', Math.round(s.minHip) + '°');
