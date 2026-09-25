@@ -3,14 +3,31 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>BioLab · Proporciones</title>
+  <title>biomecanica squat rdl</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
   <header class="top">
-    <div class="brand"><span class="logo">◢</span> Bio<b>Lab</b><small>proporciones · técnica</small></div>
+    <a class="brand" href="https://www.instagram.com/adriisana/" target="_blank" rel="noopener" aria-label="Instagram de @adriisana">
+      <svg class="ig" viewBox="0 0 24 24" aria-hidden="true">
+        <defs>
+          <radialGradient id="igGrad" cx="30%" cy="107%" r="150%">
+            <stop offset="0" stop-color="#fdf497" />
+            <stop offset="0.05" stop-color="#fdf497" />
+            <stop offset="0.45" stop-color="#fd5949" />
+            <stop offset="0.6" stop-color="#d6249f" />
+            <stop offset="0.9" stop-color="#285aeb" />
+          </radialGradient>
+        </defs>
+        <rect x="1" y="1" width="22" height="22" rx="6.5" fill="url(#igGrad)" />
+        <rect x="5.5" y="5.5" width="13" height="13" rx="4" fill="none" stroke="#fff" stroke-width="1.8" />
+        <circle cx="12" cy="12" r="3.1" fill="none" stroke="#fff" stroke-width="1.8" />
+        <circle cx="16.4" cy="7.6" r="1.05" fill="#fff" />
+      </svg>
+      <span>@adriisana</span>
+    </a>
     <div class="seg ex-switch" id="exSwitch">
       <button data-ex="squat" class="on">SQUAT</button>
       <button data-ex="rdl">RDL</button>
@@ -74,6 +91,24 @@
     <section class="stage">
       <div class="canvas-wrap">
         <canvas id="cv"></canvas>
+        <canvas id="cv3d" hidden></canvas>
+        <div class="cam3d" id="cam3d" hidden>
+          <div class="joy" id="joy" title="Arrastra para girar la cámara">
+            <span class="ar n">▲</span><span class="ar s">▼</span><span class="ar w">◀</span><span class="ar e">▶</span>
+            <div class="knob" id="joyKnob"></div>
+          </div>
+          <div class="cam-btns">
+            <button data-zoom="0.87" title="Acercar">＋</button>
+            <button data-zoom="1.15" title="Alejar">－</button>
+          </div>
+          <div class="cam-views" id="camViews">
+            <button data-view="side">Lateral</button>
+            <button data-view="front">Frontal</button>
+            <button data-view="back">Posterior</button>
+            <button data-view="q34">3/4</button>
+            <button data-view="top">Cenital</button>
+          </div>
+        </div>
         <div class="badge" id="styleBadge"></div>
         <div class="warn" id="warn">⚠ Equilibrio comprometido</div>
         <div class="hint" id="hint">Arrastra las flechas <span>◆</span> de rodilla, cadera y hombro para cambiar las proporciones</div>
@@ -83,6 +118,7 @@
           <button class="btn play" id="bPlay">▶ PLAY</button>
           <button class="btn" id="bPause">⏸ PAUSE</button>
           <button class="btn" id="bReset">↺ RESET</button>
+          <button class="btn view3d" id="b3d" title="Ver la animación en 3D">◈ 3D</button>
           <div class="seg small" id="speed">
             <button data-s="0.5">0.5×</button>
             <button data-s="1" class="on">1×</button>
@@ -125,8 +161,10 @@
     </aside>
   </main>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="js/model.js"></script>
   <script src="js/render.js"></script>
+  <script src="js/view3d.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

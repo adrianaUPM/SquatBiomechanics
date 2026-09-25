@@ -26,6 +26,7 @@
     trace: true,
     hover: null,
     drag: null,
+    view: '2d',
   };
 
   let rep, ana, ghostRep = null, ghostKey = '';
@@ -45,7 +46,7 @@
     }
     dirty = false;
     const newRef = BM.heightOf(st.body);
-    if (!st.drag) { Render.setRef(newRef); Render.fit(cv); }
+    if (!st.drag) { Render.setRef(newRef); if (st.view === '2d') Render.fit(cv); }
     syncControls();
     renderSummary();
   }
@@ -208,6 +209,59 @@
   cv.addEventListener('pointercancel', endDrag);
   cv.addEventListener('pointerleave', () => { if (!st.drag) st.hover = null; });
 
+  /* ---------- vista 3D ---------- */
+  const cv3d = $('cv3d');
+  const b3d = $('b3d');
+  let init3d = false;
+  if (!View3D.available) { b3d.disabled = true; b3d.title = 'No se pudo cargar Three.js (requiere conexión)'; }
+
+  function setView(v) {
+    if (v === '3d' && !View3D.available) return;
+    st.view = v;
+    const is3d = v === '3d';
+    if (is3d && !init3d) { View3D.init(cv3d); init3d = true; }
+    cv.hidden = is3d;
+    cv3d.hidden = !is3d;
+    $('cam3d').hidden = !is3d;
+    cv.parentElement.classList.toggle('is3d', is3d);
+    b3d.classList.toggle('on', is3d);
+    b3d.textContent = is3d ? '◧ 2D' : '◈ 3D';
+    b3d.title = is3d ? 'Volver a la vista 2D' : 'Ver la animación en 3D';
+    st.hover = null; st.drag = null;
+    resize();
+  }
+  b3d.addEventListener('click', () => setView(st.view === '3d' ? '2d' : '3d'));
+
+  // joystick: la desviación del mando fija la velocidad de giro de la cámara
+  const joy = $('joy'), knob = $('joyKnob');
+  let joyId = null;
+  function joyMove(e) {
+    const r = joy.getBoundingClientRect();
+    const R = r.width / 2 - 14;
+    let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+    const d = Math.hypot(dx, dy);
+    if (d > R) { dx *= R / d; dy *= R / d; }
+    knob.style.transform = `translate(${dx}px, ${dy}px)`;
+    View3D.setJoy(dx / R, dy / R);
+  }
+  joy.addEventListener('pointerdown', (e) => {
+    joyId = e.pointerId; joy.setPointerCapture(joyId); joy.classList.add('active'); joyMove(e);
+  });
+  joy.addEventListener('pointermove', (e) => { if (e.pointerId === joyId) joyMove(e); });
+  const joyEnd = (e) => {
+    if (e.pointerId !== joyId) return;
+    joyId = null; joy.classList.remove('active');
+    knob.style.transform = ''; View3D.setJoy(0, 0);
+  };
+  joy.addEventListener('pointerup', joyEnd);
+  joy.addEventListener('pointercancel', joyEnd);
+  $('cam3d').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.zoom) View3D.zoomBy(+b.dataset.zoom);
+    if (b.dataset.view) View3D.setView(b.dataset.view);
+  });
+
   /* ---------- lecturas ---------- */
   const muscleEls = {};
   document.querySelectorAll('.mus').forEach((el) => { muscleEls[el.dataset.m] = el.querySelector('i'); });
@@ -284,7 +338,9 @@
   }
 
   /* ---------- bucle principal ---------- */
-  function resize() { Render.fit(cv); }
+  function resize() {
+    if (st.view === '3d') View3D.resize(); else Render.fit(cv);
+  }
   window.addEventListener('resize', resize);
   new ResizeObserver(resize).observe(cv.parentElement);
 
@@ -317,12 +373,16 @@
           : [`Torso ${b.L.toFixed(1)} cm`, `Altura ${BM.heightOf(b).toFixed(0)} cm`];
       tooltip = { x: st.drag.x, y: st.drag.y, lines };
     }
-    Render.draw({
-      P, sex: st.sex, ang, mus, ex: st.ex,
-      ghost: st.ghost && ghostRep ? BM.frameAt(ghostRep, p) : null,
-      paths: st.trace ? ana : null,
-      hover: st.hover, active: st.drag && st.drag.id, tooltip,
-    });
+    if (st.view === '3d') {
+      View3D.draw({ P, sex: st.sex, mus, ex: st.ex });
+    } else {
+      Render.draw({
+        P, sex: st.sex, ang, mus, ex: st.ex,
+        ghost: st.ghost && ghostRep ? BM.frameAt(ghostRep, p) : null,
+        paths: st.trace ? ana : null,
+        hover: st.hover, active: st.drag && st.drag.id, tooltip,
+      });
+    }
     renderReadouts(ang, mus);
     drawChart();
     requestAnimationFrame(frame);
@@ -335,6 +395,7 @@
   if (hp.get('preset')) $('presets').querySelector(`[data-p="${hp.get('preset')}"]`)?.click();
   if (hp.get('t')) st.t = clamp(+hp.get('t'), 0, 1);
   if (hp.get('ghost')) { $('optGhost').checked = true; st.ghost = true; }
+  if (hp.get('view') === '3d') setView('3d');
 
   resize();
   recompute();

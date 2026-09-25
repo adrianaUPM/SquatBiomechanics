@@ -88,6 +88,15 @@ const Render = (() => {
     ctx.closePath();
   }
 
+  function openCurve(pts) {
+    const s = pts.map(S);
+    ctx.beginPath();
+    ctx.moveTo(s[0].x, s[0].y);
+    if (s.length === 3) ctx.quadraticCurveTo(2 * s[1].x - (s[0].x + s[2].x) / 2, 2 * s[1].y - (s[0].y + s[2].y) / 2, s[2].x, s[2].y);
+    else s.slice(1).forEach((p) => ctx.lineTo(p.x, p.y));
+    ctx.stroke();
+  }
+
   function ellipsePath(e) {
     const c = S(e.c);
     ctx.beginPath();
@@ -101,17 +110,46 @@ const Render = (() => {
   /* ---------- perfiles corporales (fracción de la altura) ---------- */
   const PR = {
     shankF: [[0, 0.016], [0.5, 0.019], [1, 0.027]],
-    shankB: [[0, 0.019], [0.25, 0.027], [0.65, 0.04], [0.86, 0.035], [1, 0.03]],
-    thighF: [[0, 0.028], [0.3, 0.04], [0.62, 0.047], [0.9, 0.044], [1, 0.04]],
-    thighB: [[0, 0.03], [0.4, 0.04], [0.8, 0.045], [1, 0.045]],
-    torsoF_m: [[0, 0.04], [0.15, 0.05], [0.42, 0.05], [0.7, 0.061], [0.86, 0.055], [1, 0.028]],
-    torsoB_m: [[0, 0.058], [0.2, 0.05], [0.4, 0.042], [0.7, 0.056], [0.88, 0.05], [1, 0.028]],
-    torsoF_f: [[0, 0.042], [0.15, 0.047], [0.42, 0.042], [0.64, 0.07], [0.76, 0.058], [0.9, 0.044], [1, 0.026]],
-    torsoB_f: [[0, 0.062], [0.2, 0.052], [0.4, 0.038], [0.7, 0.05], [0.88, 0.046], [1, 0.026]],
-    uarm: [[0, 0.024], [0.5, 0.027], [1, 0.029]],
-    farm: [[0, 0.017], [0.6, 0.022], [1, 0.023]],
+    shankB: [[0, 0.018], [0.2, 0.022], [0.45, 0.036], [0.68, 0.041], [0.86, 0.035], [1, 0.03]],
+    thighF: [[0, 0.028], [0.12, 0.036], [0.3, 0.039], [0.62, 0.047], [0.9, 0.044], [1, 0.04]],
+    thighB: [[0, 0.03], [0.4, 0.04], [0.8, 0.044], [1, 0.043]],
+    torsoF_m: [[0, 0.04], [0.15, 0.048], [0.42, 0.049], [0.62, 0.055], [0.74, 0.062], [0.86, 0.055], [1, 0.028]],
+    torsoB_m: [[0, 0.05], [0.2, 0.046], [0.4, 0.04], [0.7, 0.056], [0.88, 0.05], [1, 0.028]],
+    torsoF_f: [[0, 0.042], [0.15, 0.047], [0.42, 0.041], [0.58, 0.05], [0.66, 0.068], [0.76, 0.056], [0.9, 0.044], [1, 0.026]],
+    torsoB_f: [[0, 0.052], [0.2, 0.046], [0.4, 0.036], [0.7, 0.049], [0.88, 0.045], [1, 0.026]],
+    uarm: [[0, 0.022], [0.5, 0.027], [1, 0.03]],
+    farm: [[0, 0.016], [0.6, 0.022], [1, 0.024]],
     neck: [[0, 0.03], [1, 0.026]],
   };
+
+  // punto sobre el eje P0→P1 a la fracción t, desplazado "off" hacia el lado anterior
+  function along(P0, P1, t, off) {
+    const d = unit(sub(P1, P0));
+    return add(add(P0, mul(sub(P1, P0), t)), mul(V(d.y, -d.x), off));
+  }
+
+  // Glúteo mayor: nace en la cresta ilíaca/sacro y se inserta bajo el trocánter.
+  // Se construye entre la dirección posterior de la pelvis (torso) y la del muslo,
+  // así se estira en la flexión profunda en lugar de ser un círculo rígido.
+  function glutePts(P, dT, nT, Hh, k) {
+    const n = P.n, td = P.td;
+    const bis = unit(add(add(mul(n, -1), mul(nT, -1)), mul(dT, -0.3)));
+    const at = (v) => add(P.H, mul(v, Hh * k));
+    return [
+      at(add(mul(td, 0.1), mul(n, -0.05))),     // borde superior (cresta ilíaca)
+      at(add(mul(td, 0.05), mul(n, -0.063))),   // porción superior
+      at(mul(bis, 0.07)),                        // máxima proyección
+      at(add(mul(dT, -0.06), mul(nT, -0.058))), // porción inferior
+      at(add(mul(dT, -0.1), mul(nT, -0.046))),  // pliegue glúteo
+      at(add(mul(dT, -0.05), mul(nT, -0.01))),
+      at(add(mul(td, 0.04), mul(n, -0.01))),
+    ];
+  }
+
+  function shrink(pts, k) {
+    const c = pts.reduce((a, p) => add(a, mul(p, 1 / pts.length)), V(0, 0));
+    return pts.map((p) => add(c, mul(sub(p, c), k)));
+  }
 
   function buildShapes(P, sex) {
     const Hh = P.height;
@@ -129,8 +167,8 @@ const Render = (() => {
     g.shank = { type: 'poly', pts: limb(P.A, P.K, PR.shankF, PR.shankB, Hh * lw) };
     const dT = unit(sub(P.H, P.K)), nT = V(dT.y, -dT.x);
     g.thigh = { type: 'poly', pts: limb(add(P.K, mul(dT, -0.01 * Hh)), add(P.H, mul(dT, 0.02 * Hh)), PR.thighF, PR.thighB, Hh * thighW) };
-    const gk = fem ? 1.12 : 1;
-    g.glute = { type: 'ell', c: add(P.H, add(mul(nT, -0.036 * Hh * gk), mul(dT, -0.028 * Hh))), rx: 0.058 * Hh * gk, ry: 0.05 * Hh * gk, dir: dT };
+    const gk = fem ? 1.1 : 1;
+    g.glute = { type: 'poly', pts: glutePts(P, dT, nT, Hh, gk) };
     const T0 = add(P.H, mul(P.td, -0.03 * Hh)), T1 = add(P.S, mul(P.td, 0.035 * Hh));
     const tF = fem ? PR.torsoF_f : PR.torsoF_m, tB = fem ? PR.torsoB_f : PR.torsoB_m;
     g.torso = { type: 'poly', pts: limb(T0, T1, tF, tB, Hh), P0: T0, P1: T1, tB };
@@ -138,12 +176,38 @@ const Render = (() => {
     g.head = { type: 'ell', c: P.headC, rx: P.headR * 1.02, ry: P.headR * 0.9, dir: P.nd };
     g.uarm = { type: 'poly', pts: limb(P.E, add(P.S, mul(unit(sub(P.S, P.E)), 0.01 * Hh)), PR.uarm, PR.uarm, Hh * lw) };
     g.farm = { type: 'poly', pts: limb(P.W, P.E, PR.farm, PR.farm, Hh * lw) };
+    // deltoides: cubre la cabeza del húmero y se inserta a media altura del brazo
+    const dA = unit(sub(P.E, P.S)), nA = V(dA.y, -dA.x), dk = Hh * lw;
+    const at = (a, b) => add(P.S, add(mul(dA, a * dk), mul(nA, b * dk)));
+    g.delt = { type: 'poly', pts: [at(-0.028, 0.004), at(0.0, 0.032), at(0.05, 0.03), at(0.1, 0.006), at(0.05, -0.028), at(0.0, -0.03)] };
     // músculos
     const thP0 = P.K, thP1 = P.H;
     g.mQuads = band(thP0, thP1, PR.thighF, Hh * thighW, 0.1, 0.95, 0.15, 0.86, 1);
-    g.mHams = band(thP0, thP1, PR.thighB, Hh * thighW, 0.08, 0.82, 0.12, 0.86, -1);
+    g.mHams = band(thP0, thP1, PR.thighB, Hh * thighW, 0.08, 0.8, 0.12, 0.86, -1);
     g.mErect = band(T0, T1, tB, Hh, 0.1, 0.66, 0.4, 0.9, -1);
-    g.mGlute = { ...g.glute, rx: g.glute.rx * 0.84, ry: g.glute.ry * 0.8 };
+    g.mGlute = shrink(glutePts(P, dT, nT, Hh, gk), 0.84);
+    // líneas de definición anatómica (curvas abiertas)
+    const tw = Hh * thighW, sw = Hh * lw;
+    g.lines = [
+      // recto femoral / vasto lateral
+      [0.28, 0.55, 0.85].map((t) => along(P.K, P.H, t, prof(PR.thighF, t) * tw * 0.32)),
+      // vasto medial (lágrima sobre la rodilla)
+      [along(P.K, P.H, 0.06, 0.022 * tw), along(P.K, P.H, 0.2, 0.012 * tw), along(P.K, P.H, 0.36, 0.034 * tw)],
+      // cabeza del gastrocnemio
+      [0.42, 0.66, 0.9].map((t, i) => along(P.A, P.K, t, -prof(PR.shankB, t) * sw * [0.75, 0.42, 0.5][i])),
+      // tibial anterior
+      [0.25, 0.55, 0.85].map((t) => along(P.A, P.K, t, prof(PR.shankF, t) * sw * 0.2)),
+      // borde del dorsal ancho
+      [0.4, 0.58, 0.8].map((t, i) => along(T0, T1, t, -prof(tB, t) * Hh * [0.25, 0.55, 0.6][i])),
+    ];
+    if (fem) {
+      // pliegue inferior del pecho
+      g.lines.push([along(T0, T1, 0.54, tF[3][1] * Hh * 0.72), along(T0, T1, 0.585, 0.065 * Hh), along(T0, T1, 0.64, 0.068 * Hh)]);
+    } else {
+      // borde inferior del pectoral y línea semilunar del abdomen
+      g.lines.push([along(T0, T1, 0.6, 0.042 * Hh), along(T0, T1, 0.64, 0.058 * Hh), along(T0, T1, 0.7, 0.062 * Hh)]);
+      g.lines.push([0.18, 0.34, 0.52].map((t) => along(T0, T1, t, prof(tF, t) * Hh * 0.72)));
+    }
     return g;
   }
 
@@ -244,11 +308,11 @@ const Render = (() => {
       ctx.fill();
     });
     // músculos
-    const mdraw = (path, v, isEll) => {
+    const mdraw = (path, v) => {
       ctx.save();
       ctx.shadowColor = muscleColor(v, 0.9);
       ctx.shadowBlur = 16 * v;
-      if (isEll) ellipsePath(path); else smoothPath(path);
+      smoothPath(path);
       ctx.fillStyle = muscleColor(v);
       ctx.fill();
       ctx.restore();
@@ -256,13 +320,19 @@ const Render = (() => {
     mdraw(g.mErect, mus.erectors);
     mdraw(g.mHams, mus.hams);
     mdraw(g.mQuads, mus.quads);
-    mdraw(g.mGlute, mus.glutes, true);
+    mdraw(g.mGlute, mus.glutes);
+    // definición muscular
+    ctx.save();
+    ctx.strokeStyle = 'rgba(80,96,120,0.45)'; ctx.lineWidth = 1.3; ctx.lineCap = 'round';
+    g.lines.forEach((l) => openCurve(l));
+    ctx.restore();
     // cabeza: pelo y rasgos
     drawHeadDetails(P, sex);
     // brazo cercano
     ctx.strokeStyle = COLORS.outline; ctx.lineWidth = 3;
-    [g.uarm, g.farm].forEach((sh) => { shapePath(sh); ctx.stroke(); });
+    [g.uarm, g.farm, g.delt].forEach((sh) => { shapePath(sh); ctx.stroke(); });
     [g.uarm, g.farm].forEach((sh) => { shapePath(sh); ctx.fillStyle = COLORS.bodyShade; ctx.fill(); });
+    shapePath(g.delt); ctx.fillStyle = '#c3cddb'; ctx.fill();
     const hand = S(add(P.W, mul(unit(sub(P.W, P.E)), 0.3 * 0.108 * P.height)));
     ctx.beginPath(); ctx.arc(hand.x, hand.y, 0.022 * P.height * sc, 0, Math.PI * 2);
     ctx.fillStyle = COLORS.bodyShade; ctx.fill(); ctx.stroke();

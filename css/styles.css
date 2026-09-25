@@ -27,10 +27,14 @@ button { font: inherit; color: inherit; cursor: pointer; }
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
   gap: 16px; padding: 12px 20px; border-bottom: 1px solid var(--line);
 }
-.brand { font-weight: 500; font-size: 17px; letter-spacing: .2px; }
-.brand b { font-weight: 800; color: var(--accent); }
-.brand .logo { color: var(--accent); margin-right: 4px; }
-.brand small { color: var(--muted); font-size: 11px; margin-left: 10px; text-transform: uppercase; letter-spacing: 1.2px; }
+.brand {
+  justify-self: start; display: inline-flex; align-items: center; gap: 9px;
+  font-weight: 700; font-size: 16px; letter-spacing: .2px; color: var(--text); text-decoration: none;
+  padding: 4px 12px 4px 4px; border-radius: 999px; transition: background .15s;
+}
+.brand:hover { background: var(--panel2); }
+.brand:hover span { color: var(--accent); }
+.brand .ig { width: 28px; height: 28px; display: block; }
 .toggles { justify-self: end; display: flex; gap: 16px; }
 
 .seg { display: inline-flex; background: var(--panel2); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
@@ -94,6 +98,44 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 
 .hint { position: absolute; top: 12px; right: 12px; background: rgba(10,14,20,.85); border: 1px solid var(--line); color: var(--muted); font-size: 12px; padding: 6px 12px; border-radius: 999px; white-space: nowrap; transition: opacity .6s; pointer-events: none; }
 .hint span { color: var(--accent); }
 .hint.gone { opacity: 0; }
+
+#cv3d { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; }
+#cv3d[hidden], .cam3d[hidden] { display: none; }
+.canvas-wrap.is3d .hint { display: none; }
+
+/* ---------- controles de cámara 3D ---------- */
+.cam3d { position: absolute; right: 14px; bottom: 14px; z-index: 2; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; pointer-events: none; }
+.cam3d > * { pointer-events: auto; }
+.joy {
+  position: relative; width: 112px; height: 112px; border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, rgba(53,214,240,.10), rgba(10,14,20,.85) 70%);
+  border: 1px solid var(--line); box-shadow: inset 0 0 0 6px rgba(255,255,255,.02), 0 6px 24px rgba(0,0,0,.35);
+  touch-action: none; cursor: grab; user-select: none;
+}
+.joy .ar { position: absolute; font-size: 9px; color: var(--muted); opacity: .7; }
+.joy .n { top: 7px; left: 50%; transform: translateX(-50%); }
+.joy .s { bottom: 7px; left: 50%; transform: translateX(-50%); }
+.joy .w { left: 9px; top: 50%; transform: translateY(-50%); }
+.joy .e { right: 9px; top: 50%; transform: translateY(-50%); }
+.knob {
+  position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #7eeafc, var(--accent) 45%, var(--accent2));
+  box-shadow: 0 4px 14px rgba(0,0,0,.45), 0 0 18px rgba(53,214,240,.35);
+  transition: transform .18s cubic-bezier(.3,1.6,.5,1);
+}
+.joy.active { cursor: grabbing; }
+.joy.active .knob { transition: none; }
+.cam-btns { display: flex; gap: 6px; }
+.cam-btns button, .cam-views button {
+  background: rgba(10,14,20,.85); border: 1px solid var(--line); border-radius: 9px; color: var(--text);
+  font-weight: 700; transition: .15s;
+}
+.cam-btns button { width: 36px; height: 32px; font-size: 16px; }
+.cam-views { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; max-width: 260px; }
+.cam-views button { padding: 5px 9px; font-size: 11px; letter-spacing: .4px; }
+.cam-btns button:hover, .cam-views button:hover { border-color: var(--accent); color: var(--accent); }
+.btn.view3d.on { background: rgba(53,214,240,.14); border-color: var(--accent); color: var(--accent); }
+.btn.view3d:disabled { opacity: .4; cursor: not-allowed; }
 
 .transport { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px 20px; }
 .btns { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
