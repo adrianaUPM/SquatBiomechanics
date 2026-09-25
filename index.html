@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BioLab · Proporciones</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span class="logo">◢</span> Bio<b>Lab</b><small>proporciones · técnica</small></div>
+    <div class="seg ex-switch" id="exSwitch">
+      <button data-ex="squat" class="on">SQUAT</button>
+      <button data-ex="rdl">RDL</button>
+    </div>
+    <div class="toggles">
+      <label class="chk"><input type="checkbox" id="optGhost" /> <span>Comparar con promedio</span></label>
+      <label class="chk"><input type="checkbox" id="optTrace" checked /> <span>Trayectorias</span></label>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- PANEL IZQUIERDO: controles -->
+    <aside class="panel controls">
+      <div class="block">
+        <div class="lbl">Anatomía</div>
+        <div class="seg full" id="sexSwitch">
+          <button data-sex="male" class="on">♂ Hombre</button>
+          <button data-sex="female">♀ Mujer</button>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="row"><span class="lbl">Altura</span><span class="val"><input id="hNum" type="number" min="140" max="215" step="1" /> cm</span></div>
+        <input type="range" id="hRange" min="140" max="215" step="1" />
+      </div>
+
+      <div class="block seg-slider" data-seg="F">
+        <div class="row"><span class="lbl"><i class="dot" style="--c:#4f8cff"></i>Fémur</span><span class="val"><b id="vF"></b> cm <em id="pF"></em></span></div>
+        <input type="range" id="sF" step="0.5" />
+      </div>
+      <div class="block seg-slider" data-seg="T">
+        <div class="row"><span class="lbl"><i class="dot" style="--c:#2ec4b6"></i>Tibia</span><span class="val"><b id="vT"></b> cm <em id="pT"></em></span></div>
+        <input type="range" id="sT" step="0.5" />
+      </div>
+      <div class="block seg-slider" data-seg="L">
+        <div class="row"><span class="lbl"><i class="dot" style="--c:#b76bff"></i>Torso</span><span class="val"><b id="vL"></b> cm <em id="pL"></em></span></div>
+        <input type="range" id="sL" step="0.5" />
+      </div>
+      <div class="block" id="ankleBlock">
+        <div class="row"><span class="lbl">Movilidad tobillo</span><span class="val"><b id="vAnk"></b>°</span></div>
+        <input type="range" id="sAnk" min="22" max="50" step="1" />
+      </div>
+
+      <div class="ratios">
+        <div><span>Fémur/Tibia</span><b id="rFT"></b></div>
+        <div><span>Fémur/Torso</span><b id="rFL"></b></div>
+      </div>
+
+      <div class="block">
+        <div class="lbl">Perfiles rápidos</div>
+        <div class="presets" id="presets">
+          <button data-p="avg">Promedio</button>
+          <button data-p="longF">Fémur largo</button>
+          <button data-p="shortF">Fémur corto</button>
+          <button data-p="longL">Torso largo</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CENTRO: avatar + reproducción -->
+    <section class="stage">
+      <div class="canvas-wrap">
+        <canvas id="cv"></canvas>
+        <div class="badge" id="styleBadge"></div>
+        <div class="warn" id="warn">⚠ Equilibrio comprometido</div>
+        <div class="hint" id="hint">Arrastra las flechas <span>◆</span> de rodilla, cadera y hombro para cambiar las proporciones</div>
+      </div>
+      <div class="transport">
+        <div class="btns">
+          <button class="btn play" id="bPlay">▶ PLAY</button>
+          <button class="btn" id="bPause">⏸ PAUSE</button>
+          <button class="btn" id="bReset">↺ RESET</button>
+          <div class="seg small" id="speed">
+            <button data-s="0.5">0.5×</button>
+            <button data-s="1" class="on">1×</button>
+          </div>
+          <label class="chk"><input type="checkbox" id="optLoop" /> <span>Bucle</span></label>
+        </div>
+        <div class="timeline">
+          <input type="range" id="tl" min="0" max="1000" step="1" value="0" />
+          <div class="phases">
+            <span style="left:0">Inicio</span>
+            <span style="left:21%">Bajada</span>
+            <span style="left:47%" class="mid">Fondo</span>
+            <span style="left:76%">Subida</span>
+            <span style="left:100%" class="end">Final</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANEL DERECHO: ángulos y músculos -->
+    <aside class="panel readouts">
+      <div class="angles">
+        <div class="ang" style="--c:#ff8a3d"><span>Cadera</span><b id="aHip">180°</b></div>
+        <div class="ang" style="--c:#4f8cff"><span>Rodilla</span><b id="aKnee">180°</b></div>
+        <div class="ang" style="--c:#2ec4b6"><span>Tobillo</span><b id="aAnkle">90°</b></div>
+        <div class="ang" style="--c:#b76bff"><span>Torso</span><b id="aTorso">0°</b></div>
+      </div>
+      <canvas id="chart"></canvas>
+
+      <div class="lbl mt">Demanda muscular</div>
+      <div class="muscles" id="muscles">
+        <div class="mus" data-m="glutes"><span>Glúteos</span><div class="bar"><i></i></div></div>
+        <div class="mus" data-m="quads"><span>Cuádriceps</span><div class="bar"><i></i></div></div>
+        <div class="mus" data-m="hams"><span>Isquios</span><div class="bar"><i></i></div></div>
+        <div class="mus" data-m="erectors"><span>Erectores</span><div class="bar"><i></i></div></div>
+      </div>
+
+      <div class="lbl mt">En esta repetición</div>
+      <div class="summary" id="summary"></div>
+    </aside>
+  </main>
+
+  <script src="js/model.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
